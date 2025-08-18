@@ -1,0 +1,60 @@
+{
+    "types": {
+        "void": {
+            "desc": "for functions that do not return a value"
+        },
+        "bool": {
+            "desc": "a conditional type, taking on values of true or false"
+        },
+        "int": {
+            "desc": "a signed integer"
+        },
+        "float": {
+            "desc": "a single-precision floating-point scalar"
+        },
+        "double": {
+            "desc": "a double-precision floating-point scalar"
+        },
+        "char": {
+            "desc": "a single character"
+        },
+        "struct": {
+            "desc": "create user-defined types with custom fields"
+        }
+    },
+    "constants": [
+        "false",
+        "true"
+    ],
+    "control": [
+        "if",
+        "else",
+        "while",
+        "do",
+        "for",
+        "continue",
+        "break",
+        "return",
+        "switch",
+        "case",
+        "default"
+    ],
+    "preprocessor": [
+        "#define",
+        "#undef",
+        "#if",
+        "#ifdef",
+        "#ifndef",
+        "#else",
+        "#elif",
+        "#endif",
+        "#error",
+        "#warning",
+        "#pragma",
+        "#line",
+        "include"
+    ],
+    "builtin_vars": {},
+    "functions": {},
+    "defines": {}
+}

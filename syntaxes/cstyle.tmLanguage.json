@@ -1,0 +1,54 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "cstyle",
+	"patterns": [
+		{
+			"name": "string.quoted.double",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape",
+					"match": "\\\\."
+				}
+			]
+		},
+		{
+			"name": "string.quoted.single",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"name": "constant.character.escape",
+					"match": "\\\\."
+				}
+			]
+		},
+		{
+			"name": "comment.line.double-slash",
+			"match": "//.*$"
+		},
+		{
+			"name": "comment.block",
+			"begin": "/\\*",
+			"end": "\\*/"
+		},
+		{
+			"name": "storage.type",
+			"match": "\\b(void|bool|int|float|double|char|struct)\\b"
+		},
+		{
+			"name": "keyword.control",
+			"match": "\\b(if|else|while|do|for|continue|break|return|switch|case|default)\\b"
+		},
+		{
+			"name": "constant.language",
+			"match": "\\b(false|true)\\b"
+		},
+		{
+			"name": "keyword.control.directive",
+			"match": "(#define|#undef|#if|#ifdef|#ifndef|#else|#elif|#endif|#error|#warning|#pragma|#line|include)\\b"
+		}
+	],
+	"scopeName": "source.cstyle"
+}
