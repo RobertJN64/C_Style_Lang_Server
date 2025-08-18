@@ -1,10 +1,27 @@
 use crate::lang_types::*;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::*;
-use tree_sitter::{Node, Parser};
+use tree_sitter::{Node, Parser, Point};
 use tree_sitter_c;
 
-fn process_struct(src: &str, node: Node) -> Result<(String, LangType), &'static str> {
+fn point_to_position(point: Point) -> Position {
+    return Position {
+        line: point.row as u32,
+        character: point.column as u32,
+    };
+}
+
+fn node_to_location(node: Node, uri: &Url) -> Location {
+    return Location {
+        uri: uri.to_owned(),
+        range: Range {
+            start: point_to_position(node.start_position()),
+            end: point_to_position(node.end_position()),
+        },
+    };
+}
+
+fn process_struct(src: &str, node: Node, uri: &Url) -> Result<(String, LangType), &'static str> {
     let struct_name_node = node
         .child_by_field_name("name")
         .ok_or("Missing Struct Name")?;
@@ -15,7 +32,7 @@ fn process_struct(src: &str, node: Node) -> Result<(String, LangType), &'static 
 
     let mut fields = HashMap::new();
     for field_declaration in body_node.children(&mut body_node.walk()) {
-        if let Ok((k, v)) = process_declaration(src, field_declaration) {
+        if let Ok((k, v)) = process_declaration(src, field_declaration, uri) {
             fields.insert(k, v);
         }
     }
@@ -24,8 +41,9 @@ fn process_struct(src: &str, node: Node) -> Result<(String, LangType), &'static 
         struct_name.to_string(),
         LangType {
             fields,
+            declaration_position: Some(node_to_location(struct_name_node, uri)),
             desc: "struct".to_string(),
-            enable_semantic_highlighting: true,
+            builtin: false,
         },
     ));
 }
@@ -63,7 +81,11 @@ fn process_declarator(
 // TODO - multiple declarations?
 // TODO - type qualifiers?
 // can process an input like "double x = 5; vec3 x; vec4 x[2]; in body, array, or function header"
-fn process_declaration(src: &str, node: Node) -> Result<(String, LangVar), &'static str> {
+fn process_declaration(
+    src: &str,
+    node: Node,
+    uri: &Url,
+) -> Result<(String, LangVar), &'static str> {
     let declarator_node = node
         .child_by_field_name("declarator")
         .ok_or("missing declaration declarator")?;
@@ -71,17 +93,16 @@ fn process_declaration(src: &str, node: Node) -> Result<(String, LangVar), &'sta
         .child_by_field_name("type")
         .ok_or("missing declaration type")?;
 
-    let mut type_list = vec![type_node.utf8_text(src.as_bytes()).unwrap().to_string()];
-    let identifier = process_declarator(src, declarator_node, &mut type_list)?;
+    let primary_type = type_node.utf8_text(src.as_bytes()).unwrap().to_string();
+    let mut type_qualifier_list = vec![];
+    let identifier = process_declarator(src, declarator_node, &mut type_qualifier_list)?;
 
     return Ok((
         identifier.to_string(),
         LangVar {
-            type_list,
-            declaration_position: Position {
-                line: declarator_node.start_position().row as u32,
-                character: declarator_node.start_position().column as u32,
-            },
+            primary_type,
+            type_qualifier_list,
+            declaration_position: Some(node_to_location(declarator_node, uri)),
             unused: true,
         },
     ));
@@ -90,17 +111,18 @@ fn process_declaration(src: &str, node: Node) -> Result<(String, LangVar), &'sta
 fn extract_recursively(
     src: &str,
     node: Node,
+    uri: &Url,
     types: &mut HashMap<String, LangType>,
     functions: &mut HashMap<String, LangFunc>,
     defines: &mut HashMap<String, LangDefine>,
     active_scope: &mut Scope,
 ) {
     if node.kind() == "declaration" || node.kind() == "parameter_declaration" {
-        if let Ok((name, lv)) = process_declaration(src, node) {
+        if let Ok((name, lv)) = process_declaration(src, node, uri) {
             active_scope.vars.insert(name, lv);
         }
     } else if node.kind() == "struct_specifier" {
-        if let Ok((name, lt)) = process_struct(src, node) {
+        if let Ok((name, lt)) = process_struct(src, node, uri) {
             types.insert(name, lt);
         }
     }
@@ -112,9 +134,9 @@ fn extract_recursively(
                 functions.insert(
                     func_name.to_owned(),
                     LangFunc {
-                        params: vec![],
+                        params: vec![], // TODO - params
+                        declaration_position: Some(node_to_location(node, uri)),
                         desc: "".to_owned(), // TODO - grab surrounding comments for desc
-                        enable_semantic_highlighting: true,
                     },
                 );
             } else if node.kind() == "preproc_def" {
@@ -123,7 +145,7 @@ fn extract_recursively(
                     define_name.to_owned(),
                     LangDefine {
                         insert_text: "".to_owned(), // TODO - grab the replacement text
-                        enable_semantic_highlighting: true,
+                        declaration_position: Some(node_to_location(node, uri)),
                     },
                 );
             } else {
@@ -140,19 +162,19 @@ fn extract_recursively(
                 vars: HashMap::new(),
                 scopes: vec![],
             };
-            extract_recursively(src, child, types, functions, defines, &mut sub_scope);
+            extract_recursively(src, child, uri, types, functions, defines, &mut sub_scope);
             active_scope.scopes.push((
                 child.start_position().row as u32,
                 child.end_position().row as u32,
                 sub_scope,
             ));
         } else {
-            extract_recursively(src, child, types, functions, defines, active_scope);
+            extract_recursively(src, child, uri, types, functions, defines, active_scope);
         }
     }
 }
 
-pub fn parse(text: String, lang_db: &LangDB) -> ParseState {
+pub fn parse(text: String, uri: &Url, lang_db: &LangDB) -> ParseState {
     let mut parser = Parser::new();
     parser
         .set_language(&tree_sitter_c::LANGUAGE.into())
@@ -184,6 +206,7 @@ pub fn parse(text: String, lang_db: &LangDB) -> ParseState {
         extract_recursively(
             &text,
             tree.root_node(),
+            uri,
             &mut types,
             &mut functions,
             &mut defines,

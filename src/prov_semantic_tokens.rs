@@ -45,25 +45,21 @@ fn extract_sm_tokens_recursively(
     for child in node.children(&mut node.walk()) {
         if child.kind() == "identifier" {
             let name = child.utf8_text(src.as_bytes()).unwrap();
-            if let Some(lf) = parse_state.functions.get(name) {
-                if lf.enable_semantic_highlighting {
-                    simple_tokens.push(SimpleToken {
-                        row: child.start_position().row,
-                        col: child.start_position().column,
-                        len: name.len(),
-                        token_type: LangSemanticToken::FUNCTION,
-                    });
-                }
+            if parse_state.functions.contains_key(name) {
+                simple_tokens.push(SimpleToken {
+                    row: child.start_position().row,
+                    col: child.start_position().column,
+                    len: name.len(),
+                    token_type: LangSemanticToken::FUNCTION,
+                });
             }
-            if let Some(ld) = parse_state.defines.get(name) {
-                if ld.enable_semantic_highlighting {
-                    simple_tokens.push(SimpleToken {
-                        row: child.start_position().row,
-                        col: child.start_position().column,
-                        len: name.len(),
-                        token_type: LangSemanticToken::MACRO,
-                    });
-                }
+            if parse_state.defines.contains_key(name) {
+                simple_tokens.push(SimpleToken {
+                    row: child.start_position().row,
+                    col: child.start_position().column,
+                    len: name.len(),
+                    token_type: LangSemanticToken::MACRO,
+                });
             }
             // TODO - highlight vars within scope
         }
@@ -88,7 +84,7 @@ fn extract_sm_tokens_recursively(
         if child.kind() == "type_identifier" {
             let name = child.utf8_text(src.as_bytes()).unwrap();
             if let Some(lt) = parse_state.types.get(name) {
-                if lt.enable_semantic_highlighting {
+                if !lt.builtin {
                     simple_tokens.push(SimpleToken {
                         row: child.start_position().row,
                         col: child.start_position().column,

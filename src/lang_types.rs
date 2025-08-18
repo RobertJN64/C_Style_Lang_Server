@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tower_lsp::lsp_types::{CompletionItemKind, Position};
+use tower_lsp::lsp_types::{CompletionItemKind, Location, Position};
 use tree_sitter::Tree;
 
 //// Language Objects
@@ -8,14 +8,19 @@ use tree_sitter::Tree;
 // A typed object (variables, parameters, fields, etc.)
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct LangVar {
-    // types and modifiers applied to this var
-    // for example, `int my2dArr[5][5] -> ['int', '[]', '[]']`
+    // type of the variable
+    // for example, `const int my2dArr[5][5] -> 'int'
     // used for providing completions
-    pub type_list: Vec<String>,
+    pub primary_type: String,
+
+    // types qualifiers applied to this var
+    // for example, `const int my2dArr[5][5] -> ['const', '[]', '[]']`
+    // used for providing completions
+    pub type_qualifier_list: Vec<String>,
 
     // declaration location within the document
-    // used for providing unusued variable warnings
-    pub declaration_position: Position,
+    // used for providing unusued variable warnings and goto definition
+    pub declaration_position: Option<Location>,
 
     // set to true by default, set to false if used outside of its declaration
     // used for providing unusued variable warnings
@@ -29,12 +34,17 @@ pub struct LangType {
     // used for providing completions
     pub fields: HashMap<String, LangVar>,
 
+    // declaration location within any document
+    // used for providing goto definition
+    pub declaration_position: Option<Location>,
+
     // human readable desc of type as a markdown string
     // used for hovers
     pub desc: String,
 
-    // set to false if from LangDB, set to true if user created type
-    pub enable_semantic_highlighting: bool,
+    // False if user created struct, true otherwise
+    // changes semantic highlighting
+    pub builtin: bool,
 }
 
 // A builtin or user defined function
@@ -45,12 +55,13 @@ pub struct LangFunc {
     // The variables in the scope are used for handling unused parameter warnings
     pub params: Vec<(String, LangVar)>,
 
+    // declaration location within any document
+    // used for providing goto definition
+    pub declaration_position: Option<Location>,
+
     // human readable desc of type as a markdown string
     // used for hovers
     pub desc: String,
-
-    // set to false if from LangDB, set to true if user created function
-    pub enable_semantic_highlighting: bool,
 }
 
 // A `#define` replacement macro
@@ -59,8 +70,9 @@ pub struct LangDefine {
     // text that will be inserted when preprocessor runs
     pub insert_text: String,
 
-    // set to false if from LangDB, set to true if user created macro
-    pub enable_semantic_highlighting: bool,
+    // declaration location within any document
+    // used for providing goto definition
+    pub declaration_position: Option<Location>,
 }
 
 //// LangDB

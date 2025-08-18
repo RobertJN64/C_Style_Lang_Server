@@ -15,6 +15,7 @@ mod lsp_util;
 mod parser;
 mod prov_completions;
 mod prov_folding;
+mod prov_goto;
 mod prov_hover;
 mod prov_semantic_tokens;
 
@@ -32,6 +33,9 @@ impl LanguageServer for Backend {
                 completion_provider: Some(prov_completions::capabilities()),
                 hover_provider: Some(prov_hover::capabilities()),
                 semantic_tokens_provider: Some(prov_semantic_tokens::capabilities()),
+                definition_provider: Some(prov_goto::definition_capabilities()),
+                type_definition_provider: Some(prov_goto::type_definition_capabilities()),
+
                 //folding_range_provider: Some(prov_folding::capabilities()), // the default indentation based is better
                 text_document_sync: Some(TextDocumentSyncCapability::Options(
                     TextDocumentSyncOptions {
@@ -75,7 +79,11 @@ impl LanguageServer for Backend {
         debug!("file opened");
         self.documents.write().await.insert(
             params.text_document.uri.clone(),
-            parser::parse(params.text_document.text.clone(), &self.lang_db),
+            parser::parse(
+                params.text_document.text.clone(),
+                &params.text_document.uri,
+                &self.lang_db,
+            ),
         );
 
         self.generate_diagnostics(
@@ -89,7 +97,11 @@ impl LanguageServer for Backend {
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         self.documents.write().await.insert(
             params.text_document.uri.clone(),
-            parser::parse(params.content_changes[0].text.clone(), &self.lang_db),
+            parser::parse(
+                params.content_changes[0].text.clone(),
+                &params.text_document.uri,
+                &self.lang_db,
+            ),
         );
 
         self.generate_diagnostics(
@@ -144,6 +156,44 @@ impl LanguageServer for Backend {
                 result_id: None,
                 data: prov_semantic_tokens::get_sm_tokens(parse_state),
             }))),
+            None => Ok(None),
+        }
+    }
+
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let rw_guard = self.documents.read().await;
+        let parse_state = rw_guard.get(&params.text_document_position_params.text_document.uri);
+
+        match parse_state {
+            Some(parse_state) => Ok(prov_goto::goto_definition(
+                &lang_types::get_scoped_parse_state(
+                    parse_state,
+                    params.text_document_position_params.position,
+                ),
+                params.text_document_position_params.position,
+            )),
+            None => Ok(None),
+        }
+    }
+
+    async fn goto_type_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let rw_guard = self.documents.read().await;
+        let parse_state = rw_guard.get(&params.text_document_position_params.text_document.uri);
+
+        match parse_state {
+            Some(parse_state) => Ok(prov_goto::goto_type_definition(
+                &lang_types::get_scoped_parse_state(
+                    parse_state,
+                    params.text_document_position_params.position,
+                ),
+                params.text_document_position_params.position,
+            )),
             None => Ok(None),
         }
     }

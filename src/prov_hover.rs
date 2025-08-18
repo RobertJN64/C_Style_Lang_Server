@@ -41,7 +41,11 @@ pub fn get_hover(sps: &lang_types::ScopedParseState, position: Position) -> Opti
         return Some(Hover {
             contents: HoverContents::Markup(MarkupContent {
                 kind: MarkupKind::Markdown,
-                value: lv.type_list.join(" ") + " " + &word,
+                value: lv.primary_type.to_owned()
+                    + " "
+                    + &lv.type_qualifier_list.join(" ")
+                    + " "
+                    + &word,
             }),
             range: None,
         });

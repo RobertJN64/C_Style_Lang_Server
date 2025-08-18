@@ -73,6 +73,7 @@ fn add_ident_completions(
     remaining_fields: &mut Vec<String>,
     sps: &lang_types::ScopedParseState,
 ) {
+    // TODO lang specific - handle type qualifier list, example below adds `.length()` for array types
     let mut array_count = 0;
 
     while let Some("[]") = remaining_fields.last().map(|s| s.as_str()) {
@@ -81,7 +82,7 @@ fn add_ident_completions(
     }
 
     let expected_array_count = active_ident
-        .type_list
+        .type_qualifier_list
         .iter()
         .filter(|ident| *ident == "[]")
         .count();
@@ -99,14 +100,12 @@ fn add_ident_completions(
         return;
     }
 
-    for var_type in active_ident.type_list.iter() {
-        if let Some(lt) = sps.types.get(var_type) {
-            if remaining_fields.len() == 0 {
-                add_field_completions(items, &lt.fields);
-            } else {
-                if let Some(field) = lt.fields.get(&remaining_fields.pop().unwrap()) {
-                    add_ident_completions(items, field, remaining_fields, sps);
-                }
+    if let Some(lt) = sps.types.get(&active_ident.primary_type) {
+        if remaining_fields.len() == 0 {
+            add_field_completions(items, &lt.fields);
+        } else {
+            if let Some(field) = lt.fields.get(&remaining_fields.pop().unwrap()) {
+                add_ident_completions(items, field, remaining_fields, sps);
             }
         }
     }
