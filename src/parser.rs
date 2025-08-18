@@ -43,7 +43,6 @@ fn process_struct(src: &str, node: Node, uri: &Url) -> Result<(String, LangType)
             fields,
             declaration_position: Some(node_to_location(struct_name_node, uri)),
             desc: "struct".to_string(),
-            builtin: false,
         },
     ));
 }
@@ -224,7 +223,8 @@ pub fn parse(text: String, uri: &Url, lang_db: &LangDB) -> ParseState {
         global_scope,
     };
 
-    //log::debug!("{:#?}", ps);
+    //print_tree(&ps.text, ps.tree.clone().unwrap().root_node(), 0, None);
+    log::debug!("{}", ps.tree.clone().unwrap().root_node().to_sexp());
     return ps;
 }
 
