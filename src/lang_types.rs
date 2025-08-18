@@ -29,6 +29,10 @@ pub struct LangVar {
     pub unused: bool,
 }
 
+fn serde_default_true() -> bool {
+    true
+}
+
 // A builtin type or user defined struct
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct LangType {
@@ -44,6 +48,10 @@ pub struct LangType {
     // human readable desc of type as a markdown string
     // used for hovers
     pub desc: String,
+
+    // changes hover and semantic highlights
+    #[serde(default = "serde_default_true")]
+    pub builtin: bool,
 }
 
 // A builtin or user defined function

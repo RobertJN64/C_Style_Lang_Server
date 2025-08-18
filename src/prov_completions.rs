@@ -37,7 +37,7 @@ fn add_basic_completions(sps: &lang_types::ScopedParseState, items: &mut Vec<Com
         });
     }
 
-    for (label, _) in sps.defines.iter() {
+    for label in sps.defines.keys() {
         items.push(CompletionItem {
             label: label.to_string(),
             kind: Some(CompletionItemKind::CONSTANT),

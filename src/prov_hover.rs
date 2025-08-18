@@ -9,15 +9,24 @@ pub fn get_hover(sps: &lang_types::ScopedParseState, position: Position) -> Opti
     let word = lsp_util::extract_word_at(&sps.text, position);
 
     if let Some(lt) = sps.types.get(&word) {
-        let mut desc = "### ".to_owned() + &word + "\n---\ntype with the following fields:\n\n";
+        let mut desc = "### ".to_owned() + &word + "\n---\n";
+        if lt.builtin {
+            desc += &("builtin type\n\n".to_owned() + &lt.desc);
+        } else {
+            desc += "user defined struct"
+        }
 
         let mut fields: Vec<&String> = lt.fields.keys().collect();
-        fields.sort(); // makes output deterministic
-        for field in fields {
-            desc += " - ";
-            desc += field;
-            desc += "\n\n";
+        if fields.len() > 0 {
+            desc += "\n\nfields:\n";
+            fields.sort(); // makes output deterministic
+            for field in fields {
+                desc += " - ";
+                desc += field;
+                desc += "\n\n";
+            }
         }
+
         return Some(Hover {
             contents: HoverContents::Markup(MarkupContent {
                 kind: MarkupKind::Markdown,

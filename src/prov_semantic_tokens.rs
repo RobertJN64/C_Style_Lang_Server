@@ -83,13 +83,15 @@ fn extract_sm_tokens_recursively(
         }
         if child.kind() == "type_identifier" {
             let name = child.utf8_text(src.as_bytes()).unwrap();
-            if parse_state.types.contains_key(name) {
-                simple_tokens.push(SimpleToken {
-                    row: child.start_position().row,
-                    col: child.start_position().column,
-                    len: name.len(),
-                    token_type: LangSemanticToken::STRUCT,
-                });
+            if let Some(lt) = parse_state.types.get(name) {
+                if !lt.builtin {
+                    simple_tokens.push(SimpleToken {
+                        row: child.start_position().row,
+                        col: child.start_position().column,
+                        len: name.len(),
+                        token_type: LangSemanticToken::STRUCT,
+                    });
+                }
             }
         }
 
