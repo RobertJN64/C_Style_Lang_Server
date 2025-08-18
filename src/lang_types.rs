@@ -16,6 +16,7 @@ pub struct LangVar {
     // types qualifiers applied to this var
     // for example, `const int my2dArr[5][5] -> ['const', '[]', '[]']`
     // used for providing completions
+    #[serde(default)] // default type_qualifier_list to [] if not provided in lang db
     pub type_qualifier_list: Vec<String>,
 
     // declaration location within the document
@@ -24,6 +25,7 @@ pub struct LangVar {
 
     // set to true by default, set to false if used outside of its declaration
     // used for providing unusued variable warnings
+    #[serde(default)] // default unused to false if not provided in lang db
     pub unused: bool,
 }
 
@@ -32,6 +34,7 @@ pub struct LangVar {
 pub struct LangType {
     // fields that objects of this type have
     // used for providing completions
+    #[serde(default)] // default fields to [] if not provided in lang db (for basic types)
     pub fields: HashMap<String, LangVar>,
 
     // declaration location within any document
@@ -41,10 +44,6 @@ pub struct LangType {
     // human readable desc of type as a markdown string
     // used for hovers
     pub desc: String,
-
-    // False if user created struct, true otherwise
-    // changes semantic highlighting
-    pub builtin: bool,
 }
 
 // A builtin or user defined function
