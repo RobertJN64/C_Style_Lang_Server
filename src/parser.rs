@@ -51,26 +51,30 @@ fn process_struct(src: &str, node: Node, uri: &Url) -> Result<(String, LangType)
 fn process_declarator(
     src: &str,
     node: Node,
+    uri: &Url,
     type_list: &mut Vec<String>,
-) -> Result<String, &'static str> {
+) -> Result<(String, Location), &'static str> {
     let identifier;
 
     match node.kind() {
         "identifier" | "field_identifier" => {
-            identifier = node.utf8_text(src.as_bytes()).unwrap().to_string()
+            identifier = (
+                node.utf8_text(src.as_bytes()).unwrap().to_string(),
+                node_to_location(node, uri),
+            )
         }
         "array_declarator" => {
             let declarator_node = node
                 .child_by_field_name("declarator")
                 .ok_or("missing array_declarator declarator")?;
-            identifier = process_declarator(src, declarator_node, type_list)?;
+            identifier = process_declarator(src, declarator_node, uri, type_list)?;
             type_list.push("[]".to_owned());
         }
         "init_declarator" => {
             let declarator_node = node
                 .child_by_field_name("declarator")
                 .ok_or("missing array_declarator declarator")?;
-            identifier = process_declarator(src, declarator_node, type_list)?;
+            identifier = process_declarator(src, declarator_node, uri, type_list)?;
         }
         _ => return Err("unexpected node kind"),
     }
@@ -95,14 +99,15 @@ fn process_declaration(
 
     let primary_type = type_node.utf8_text(src.as_bytes()).unwrap().to_string();
     let mut type_qualifier_list = vec![];
-    let identifier = process_declarator(src, declarator_node, &mut type_qualifier_list)?;
+    let (identifier, location) =
+        process_declarator(src, declarator_node, uri, &mut type_qualifier_list)?;
 
     return Ok((
         identifier.to_string(),
         LangVar {
             primary_type,
             type_qualifier_list,
-            declaration_position: Some(node_to_location(declarator_node, uri)),
+            declaration_position: Some(location),
             unused: true,
         },
     ));
@@ -135,7 +140,7 @@ fn extract_recursively(
                     func_name.to_owned(),
                     LangFunc {
                         params: vec![], // TODO - params
-                        declaration_position: Some(node_to_location(node, uri)),
+                        declaration_position: Some(node_to_location(child, uri)),
                         desc: "".to_owned(), // TODO - grab surrounding comments for desc
                     },
                 );
@@ -145,7 +150,7 @@ fn extract_recursively(
                     define_name.to_owned(),
                     LangDefine {
                         insert_text: "".to_owned(), // TODO - grab the replacement text
-                        declaration_position: Some(node_to_location(node, uri)),
+                        declaration_position: Some(node_to_location(child, uri)),
                     },
                 );
             } else {

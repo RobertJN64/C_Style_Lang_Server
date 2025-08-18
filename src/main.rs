@@ -11,13 +11,16 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 mod diagnostics;
 mod lang_types;
+mod lsp_test; // makes tests accessible
 mod lsp_util;
 mod parser;
 mod prov_completions;
 mod prov_folding;
 mod prov_goto;
 mod prov_hover;
+mod prov_inlay_hint;
 mod prov_semantic_tokens;
+mod prov_signature_help;
 
 struct Backend {
     client: Client,
@@ -35,6 +38,8 @@ impl LanguageServer for Backend {
                 semantic_tokens_provider: Some(prov_semantic_tokens::capabilities()),
                 definition_provider: Some(prov_goto::definition_capabilities()),
                 type_definition_provider: Some(prov_goto::type_definition_capabilities()),
+                inlay_hint_provider: Some(prov_inlay_hint::capabilities()),
+                signature_help_provider: Some(prov_signature_help::capabilities()),
 
                 //folding_range_provider: Some(prov_folding::capabilities()), // the default indentation based is better
                 text_document_sync: Some(TextDocumentSyncCapability::Options(
