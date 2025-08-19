@@ -1,25 +1,9 @@
 use crate::lang_types::*;
+use crate::lsp_util::node_to_location;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::*;
-use tree_sitter::{Node, Parser, Point};
+use tree_sitter::{Node, Parser};
 use tree_sitter_c;
-
-fn point_to_position(point: Point) -> Position {
-    return Position {
-        line: point.row as u32,
-        character: point.column as u32,
-    };
-}
-
-fn node_to_location(node: Node, uri: &Url) -> Location {
-    return Location {
-        uri: uri.to_owned(),
-        range: Range {
-            start: point_to_position(node.start_position()),
-            end: point_to_position(node.end_position()),
-        },
-    };
-}
 
 fn process_struct(src: &str, node: Node, uri: &Url) -> Result<(String, LangType), &'static str> {
     let struct_name_node = node

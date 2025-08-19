@@ -1,6 +1,23 @@
 use std::vec;
-
 use tower_lsp::lsp_types::*;
+use tree_sitter::{Node, Point};
+
+pub fn point_to_position(point: Point) -> Position {
+    return Position {
+        line: point.row as u32,
+        character: point.column as u32,
+    };
+}
+
+pub fn node_to_location(node: Node, uri: &Url) -> Location {
+    return Location {
+        uri: uri.to_owned(),
+        range: Range {
+            start: point_to_position(node.start_position()),
+            end: point_to_position(node.end_position()),
+        },
+    };
+}
 
 fn is_word_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'

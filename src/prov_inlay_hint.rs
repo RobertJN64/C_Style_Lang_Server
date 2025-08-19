@@ -25,26 +25,32 @@ fn process_call_expression(
         let mut param_counter = 0;
         for node in arguments_node.children(&mut node.walk()) {
             match node.kind() {
+                "(" | "," | "ERROR" | ")" => (),
+                _ => {
+                    param_counter += 1;
+                }
+            }
+        }
+
+        // don't bother for single parameter hints, but still show the ? if the user provided more than 2 params
+        if lf.params.len() < 2 && param_counter < 2 {
+            return Ok(());
+        }
+
+        let mut param_counter = 0;
+        for node in arguments_node.children(&mut node.walk()) {
+            match node.kind() {
                 "(" | "," | "ERROR" => (),
                 ")" => {
-                    if param_counter < lf.params.len() {
-                        let remaining_param_list = lf
-                            .params
-                            .iter()
-                            .skip(param_counter)
-                            .map(|(name, _)| name.as_str())
-                            .collect::<Vec<&str>>()
-                            .join(", ");
+                    for (param_name, _) in lf.params.iter().skip(param_counter) {
                         inlay_hints.push(InlayHint {
-                            position: point_to_position(node.end_position()),
-                            label: InlayHintLabel::String(
-                                "missing: ".to_owned() + &remaining_param_list,
-                            ),
+                            position: point_to_position(node.start_position()),
+                            label: InlayHintLabel::String(param_name.to_owned() + ":"),
                             kind: Some(InlayHintKind::PARAMETER),
                             text_edits: None,
                             tooltip: None,
                             padding_left: Some(true),
-                            padding_right: Some(false),
+                            padding_right: Some(true),
                             data: None,
                         });
                     }
@@ -55,16 +61,19 @@ fn process_call_expression(
                         None => "?",
                     };
 
-                    inlay_hints.push(InlayHint {
-                        position: point_to_position(node.start_position()),
-                        label: InlayHintLabel::String(label.to_owned() + ":"),
-                        kind: Some(InlayHintKind::PARAMETER),
-                        text_edits: None,
-                        tooltip: None,
-                        padding_left: Some(false),
-                        padding_right: Some(true),
-                        data: None,
-                    });
+                    // don't render hint if the current argument is the hint label
+                    if label != node.utf8_text(src.as_bytes()).unwrap().to_string() {
+                        inlay_hints.push(InlayHint {
+                            position: point_to_position(node.start_position()),
+                            label: InlayHintLabel::String(label.to_owned() + ":"),
+                            kind: Some(InlayHintKind::PARAMETER),
+                            text_edits: None,
+                            tooltip: None,
+                            padding_left: Some(false),
+                            padding_right: Some(true),
+                            data: None,
+                        });
+                    }
                     param_counter += 1;
                 }
             }

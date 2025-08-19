@@ -202,6 +202,16 @@ impl LanguageServer for Backend {
             None => Ok(None),
         }
     }
+
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        let rw_guard = self.documents.read().await;
+        let parse_state = rw_guard.get(&params.text_document.uri);
+
+        match parse_state {
+            Some(parse_state) => Ok(Some(prov_inlay_hint::get_inlay_hints(parse_state))),
+            None => Ok(None),
+        }
+    }
 }
 
 #[tokio::main]
