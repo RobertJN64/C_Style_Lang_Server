@@ -71,5 +71,15 @@ pub fn get_hover(sps: &lang_types::ScopedParseState, position: Position) -> Opti
         });
     }
 
+    if let Some(ld) = sps.defines.get(&word) {
+        return Some(Hover {
+            contents: HoverContents::Markup(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: ld.insert_text.clone(),
+            }),
+            range: None,
+        });
+    }
+
     return None;
 }

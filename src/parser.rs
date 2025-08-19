@@ -148,6 +148,26 @@ fn process_function(src: &str, node: Node, uri: &Url) -> Result<(String, LangFun
     ));
 }
 
+fn process_define(src: &str, node: Node, uri: &Url) -> Result<(String, LangDefine), &'static str> {
+    let name_node = node
+        .child_by_field_name("name")
+        .ok_or("missing define name")?;
+    let value_node = node
+        .child_by_field_name("value")
+        .ok_or("missing define value")?;
+
+    let identifier = name_node.utf8_text(src.as_bytes()).unwrap().to_owned();
+    let insert_text = value_node.utf8_text(src.as_bytes()).unwrap().to_owned();
+
+    return Ok((
+        identifier,
+        LangDefine {
+            insert_text,
+            declaration_position: Some(node_to_location(name_node, uri)),
+        },
+    ));
+}
+
 fn extract_recursively(
     src: &str,
     node: Node,
@@ -169,28 +189,13 @@ fn extract_recursively(
         if let Ok((name, lf)) = process_function(src, node, uri) {
             functions.insert(name, lf);
         }
+    } else if node.kind() == "preproc_def" {
+        if let Ok((name, ld)) = process_define(src, node, uri) {
+            defines.insert(name, ld);
+        }
     }
 
     for child in node.children(&mut node.walk()) {
-        if child.kind() == "identifier" {
-            if node.kind() == "preproc_def" {
-                let define_name = child.utf8_text(src.as_bytes()).unwrap();
-                defines.insert(
-                    define_name.to_owned(),
-                    LangDefine {
-                        insert_text: "".to_owned(), // TODO - grab the replacement text
-                        declaration_position: Some(node_to_location(child, uri)),
-                    },
-                );
-            } else {
-                // log::debug!(
-                //     "{} {}",
-                //     node.kind(),
-                //     child.utf8_text(src.as_bytes()).unwrap()
-                // );
-            }
-        }
-
         if child.kind() == "function_definition" {
             let mut sub_scope = Scope {
                 vars: HashMap::new(),

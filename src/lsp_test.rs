@@ -212,7 +212,7 @@ mod tests {
         expected_defines.insert(
             "myRep".to_owned(),
             LangDefine {
-                insert_text: "".to_owned(),
+                insert_text: "10".to_owned(),
                 declaration_position: Some(location_of(sample_code, "myRep", &sample_uri)),
             },
         );
