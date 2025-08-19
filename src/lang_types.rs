@@ -62,6 +62,9 @@ pub struct LangFunc {
     // The variables in the scope are used for handling unused parameter warnings
     pub params: Vec<(String, LangVar)>,
 
+    // function return type
+    pub return_type: String,
+
     // declaration location within any document
     // used for providing goto definition
     pub declaration_position: Option<Location>,

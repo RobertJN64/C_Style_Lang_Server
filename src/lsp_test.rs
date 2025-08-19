@@ -73,6 +73,16 @@ mod tests {
         let (empty_lang_db, sample_code, sample_uri) = shared_sample_code();
         let result = parser::parse(sample_code.to_owned(), &sample_uri, &empty_lang_db);
 
+        let param_var = (
+            "param_var".to_string(),
+            LangVar {
+                primary_type: "vec2".to_string(),
+                type_qualifier_list: vec![],
+                declaration_position: Some(location_of(sample_code, "param_var", &sample_uri)),
+                unused: true,
+            },
+        );
+
         let mut expected_types = HashMap::new();
         expected_types.insert(
             "MyStruct".to_owned(),
@@ -115,7 +125,8 @@ mod tests {
         expected_functions.insert(
             "main".to_owned(),
             LangFunc {
-                params: vec![],
+                params: vec![param_var.clone()],
+                return_type: "void".to_owned(),
                 declaration_position: Some(location_of(sample_code, "main", &sample_uri)),
                 desc: "".to_owned(),
             },
@@ -190,19 +201,7 @@ mod tests {
                                 unused: true,
                             },
                         ),
-                        (
-                            "param_var".to_string(),
-                            LangVar {
-                                primary_type: "vec2".to_string(),
-                                type_qualifier_list: vec![],
-                                declaration_position: Some(location_of(
-                                    sample_code,
-                                    "param_var",
-                                    &sample_uri,
-                                )),
-                                unused: true,
-                            },
-                        ),
+                        param_var,
                     ]),
                     scopes: vec![],
                 },
@@ -381,7 +380,7 @@ mod tests {
                 character: 8 + 5,
             },
             "main",
-            "### main\n---\n",
+            "### main\n---\n\n\nparams:\n - param_var\n\n",
         ),
         (
             Position {

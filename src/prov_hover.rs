@@ -37,10 +37,21 @@ pub fn get_hover(sps: &lang_types::ScopedParseState, position: Position) -> Opti
     }
 
     if let Some(lf) = sps.functions.get(&word) {
+        let mut desc = "### ".to_owned() + &word + "\n---\n" + &lf.desc;
+
+        if lf.params.len() > 0 {
+            desc += "\n\nparams:\n";
+            for (param_name, _) in lf.params.iter() {
+                desc += " - ";
+                desc += param_name;
+                desc += "\n\n";
+            }
+        }
+
         return Some(Hover {
             contents: HoverContents::Markup(MarkupContent {
                 kind: MarkupKind::Markdown,
-                value: "### ".to_owned() + &word + "\n---\n" + &lf.desc,
+                value: desc,
             }),
             range: None,
         });

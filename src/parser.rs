@@ -113,6 +113,41 @@ fn process_declaration(
     ));
 }
 
+fn process_function(src: &str, node: Node, uri: &Url) -> Result<(String, LangFunc), &'static str> {
+    let type_node = node
+        .child_by_field_name("type")
+        .ok_or("missing function type")?;
+    let declarator_node = node
+        .child_by_field_name("declarator")
+        .ok_or("missing function declarator")?;
+    let ident_node = declarator_node
+        .child_by_field_name("declarator")
+        .ok_or("missing function declarator ident")?;
+    let params_node = declarator_node
+        .child_by_field_name("parameters")
+        .ok_or("missing function parameters")?;
+
+    let identifier = ident_node.utf8_text(src.as_bytes()).unwrap().to_owned();
+    let return_type = type_node.utf8_text(src.as_bytes()).unwrap().to_owned();
+
+    let mut params = vec![];
+    for param_declaration in params_node.children(&mut params_node.walk()) {
+        if let Ok((k, v)) = process_declaration(src, param_declaration, uri) {
+            params.push((k, v));
+        }
+    }
+
+    return Ok((
+        identifier,
+        LangFunc {
+            params,
+            return_type,
+            declaration_position: Some(node_to_location(ident_node, uri)),
+            desc: "".to_owned(), // TODO - grab surrounding comments for desc
+        },
+    ));
+}
+
 fn extract_recursively(
     src: &str,
     node: Node,
@@ -130,21 +165,15 @@ fn extract_recursively(
         if let Ok((name, lt)) = process_struct(src, node, uri) {
             types.insert(name, lt);
         }
+    } else if node.kind() == "function_definition" {
+        if let Ok((name, lf)) = process_function(src, node, uri) {
+            functions.insert(name, lf);
+        }
     }
 
     for child in node.children(&mut node.walk()) {
         if child.kind() == "identifier" {
-            if node.kind() == "function_declarator" {
-                let func_name = child.utf8_text(src.as_bytes()).unwrap();
-                functions.insert(
-                    func_name.to_owned(),
-                    LangFunc {
-                        params: vec![], // TODO - params
-                        declaration_position: Some(node_to_location(child, uri)),
-                        desc: "".to_owned(), // TODO - grab surrounding comments for desc
-                    },
-                );
-            } else if node.kind() == "preproc_def" {
+            if node.kind() == "preproc_def" {
                 let define_name = child.utf8_text(src.as_bytes()).unwrap();
                 defines.insert(
                     define_name.to_owned(),
