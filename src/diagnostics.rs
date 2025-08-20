@@ -3,6 +3,7 @@ use tower_lsp::lsp_types::*;
 
 impl Backend {
     // TODO lang specific - implement a diagnostics provider
+    #[allow(unused_variables)]
     pub async fn generate_diagnostics(&self, text: &str, uri: Url, version: i32) {
         let mut items: Vec<Diagnostic> = vec![];
 

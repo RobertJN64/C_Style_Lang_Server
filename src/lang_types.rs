@@ -157,6 +157,7 @@ pub struct ParseState {
 
 // Holds information about the document after resolving the active scope
 #[derive(Debug)]
+#[allow(dead_code)] // the SPS tree is not currently accessed
 pub struct ScopedParseState<'src> {
     // The raw text of the source file
     pub text: &'src String,
