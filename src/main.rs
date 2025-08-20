@@ -38,6 +38,7 @@ impl LanguageServer for Backend {
                 semantic_tokens_provider: Some(prov_semantic_tokens::capabilities()),
                 definition_provider: Some(prov_goto::definition_capabilities()),
                 type_definition_provider: Some(prov_goto::type_definition_capabilities()),
+                references_provider: Some(prov_goto::references_capabilities()),
                 inlay_hint_provider: Some(prov_inlay_hint::capabilities()),
                 signature_help_provider: Some(prov_signature_help::capabilities()),
 
@@ -198,6 +199,22 @@ impl LanguageServer for Backend {
                     params.text_document_position_params.position,
                 ),
                 params.text_document_position_params.position,
+            )),
+            None => Ok(None),
+        }
+    }
+
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        let rw_guard = self.documents.read().await;
+        let parse_state = rw_guard.get(&params.text_document_position.text_document.uri);
+
+        match parse_state {
+            Some(parse_state) => Ok(prov_goto::goto_references(
+                &lang_types::get_scoped_parse_state(
+                    parse_state,
+                    params.text_document_position.position,
+                ),
+                params.text_document_position.position,
             )),
             None => Ok(None),
         }

@@ -56,5 +56,39 @@ pub fn goto_type_definition(
             }
         }
     }
+
+    if let Some(lf) = sps.functions.get(&word) {
+        if let Some(lt) = sps.types.get(&lf.return_type) {
+            match &lt.declaration_position {
+                Some(loc) => return Some(GotoDefinitionResponse::Scalar(loc.clone())),
+                None => return None,
+            }
+        }
+    }
+
+    // support this case equivalently to "goto definition" on a type
+    if let Some(lt) = sps.types.get(&word) {
+        match &lt.declaration_position {
+            Some(loc) => return Some(GotoDefinitionResponse::Scalar(loc.clone())),
+            None => return None,
+        }
+    }
+
+    return None;
+}
+
+pub fn references_capabilities() -> OneOf<bool, ReferencesOptions> {
+    return OneOf::Left(true);
+}
+
+pub fn goto_references(
+    sps: &lang_types::ScopedParseState,
+    position: Position,
+) -> Option<Vec<Location>> {
+    let word = lsp_util::extract_word_at(&sps.text, position);
+
+    if let Some(lf) = sps.functions.get(&word) {
+        return Some(lf.references.clone());
+    }
     return None;
 }

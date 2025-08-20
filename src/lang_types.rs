@@ -69,6 +69,9 @@ pub struct LangFunc {
     // used for providing goto definition
     pub declaration_position: Option<Location>,
 
+    #[serde(default)] // default references to [] when loading from lang db
+    pub references: Vec<Location>,
+
     // human readable desc of type as a markdown string
     // used for hovers
     pub desc: String,

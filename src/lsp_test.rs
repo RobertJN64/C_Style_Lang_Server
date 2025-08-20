@@ -128,6 +128,7 @@ mod tests {
                 params: vec![param_var.clone()],
                 return_type: "void".to_owned(),
                 declaration_position: Some(location_of(sample_code, "main", &sample_uri)),
+                references: vec![],
                 desc: "".to_owned(),
             },
         );

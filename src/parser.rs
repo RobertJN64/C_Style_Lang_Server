@@ -127,6 +127,7 @@ fn process_function(src: &str, node: Node, uri: &Url) -> Result<(String, LangFun
             params,
             return_type,
             declaration_position: Some(node_to_location(ident_node, uri)),
+            references: vec![],
             desc: "".to_owned(), // TODO - grab surrounding comments for desc
         },
     ));
@@ -197,6 +198,25 @@ fn extract_recursively(
     }
 }
 
+fn extract_fn_calls_recursively(
+    src: &str,
+    node: Node,
+    uri: &Url,
+    functions: &mut HashMap<String, LangFunc>,
+) {
+    if node.kind() == "call_expression" {
+        if let Some(function_node) = node.child_by_field_name("function") {
+            let function_name = function_node.utf8_text(src.as_bytes()).unwrap().to_string();
+            if let Some(lf) = functions.get_mut(&function_name) {
+                lf.references.push(node_to_location(function_node, uri));
+            }
+        }
+    }
+    for child in node.children(&mut node.walk()) {
+        extract_fn_calls_recursively(src, child, uri, functions);
+    }
+}
+
 pub fn parse(text: String, uri: &Url, lang_db: &LangDB) -> ParseState {
     let mut parser = Parser::new();
     parser
@@ -235,6 +255,9 @@ pub fn parse(text: String, uri: &Url, lang_db: &LangDB) -> ParseState {
             &mut defines,
             &mut global_scope,
         );
+
+        // grab references at the end, once we know what all the functions are
+        extract_fn_calls_recursively(&text, tree.root_node(), uri, &mut functions)
     }
 
     let ps = ParseState {
