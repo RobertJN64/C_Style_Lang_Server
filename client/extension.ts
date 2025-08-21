@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { Executable, LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node'
 
 let client: LanguageClient;
+let sharedTerminal: vscode.Terminal | undefined;
 
 
 export class ClangDocumentFormattingEditProvider implements vscode.DocumentFormattingEditProvider {
@@ -57,6 +58,54 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
     client = new LanguageClient("c-style-lang-server", "c style lang server", serverOptions, clientOptions);
     client.start();
+
+    const showRefCmd = vscode.commands.registerCommand('cstyle-lang-server.showReferences', (uri, position, locations) => {
+        vscode.commands.executeCommand(
+            "editor.action.showReferences",
+            vscode.Uri.parse(uri),
+            client.protocol2CodeConverter.asPosition(position),
+            locations.map(client.protocol2CodeConverter.asLocation),
+        );
+    });
+    ctx.subscriptions.push(showRefCmd);
+
+    // TODO lang specific - setup a reasonable command runner
+    const runMainCmd = vscode.commands.registerCommand('cstyle-lang-server.runMain', (uri, position, locations) => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor found!');
+            return;
+        }
+
+        if (!sharedTerminal) {
+            sharedTerminal = vscode.window.createTerminal('CStyle Code Runner');
+            // Dispose reference when terminal is closed
+            vscode.window.onDidCloseTerminal((closedTerminal) => {
+                if (closedTerminal === sharedTerminal) {
+                    sharedTerminal = undefined;
+                }
+            });
+        }
+
+        sharedTerminal.show();
+
+        // Show and run command
+        const filePath = editor.document.fileName;
+        const fileNameWithoutExt = path.basename(filePath).split('.').slice(0, -1).join('.') || path.basename(filePath);
+        const dirName = path.dirname(filePath);
+
+
+        // Commands to compile and run
+        // Using gcc: compile to same directory
+        const compileCmd = `gcc -x c "${filePath}" -o "${path.join(dirName, fileNameWithoutExt)}"`;
+        const runCmd = `${path.join(dirName, fileNameWithoutExt)}.exe`;
+
+        // Send commands to terminal
+        sharedTerminal.sendText(compileCmd);
+        sharedTerminal.sendText(runCmd);
+
+    });
+    ctx.subscriptions.push(runMainCmd);
 }
 
 export function deactivate(): Thenable<void> | undefined {

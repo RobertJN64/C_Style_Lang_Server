@@ -14,6 +14,7 @@ mod lang_types;
 mod lsp_test; // makes tests accessible
 mod lsp_util;
 mod parser;
+mod prov_code_lens;
 mod prov_completions;
 mod prov_folding;
 mod prov_goto;
@@ -41,6 +42,7 @@ impl LanguageServer for Backend {
                 references_provider: Some(prov_goto::references_capabilities()),
                 inlay_hint_provider: Some(prov_inlay_hint::capabilities()),
                 signature_help_provider: Some(prov_signature_help::capabilities()),
+                code_lens_provider: Some(prov_code_lens::capabilities()),
 
                 //folding_range_provider: Some(prov_folding::capabilities()), // the default indentation based is better
                 text_document_sync: Some(TextDocumentSyncCapability::Options(
@@ -207,6 +209,7 @@ impl LanguageServer for Backend {
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         let rw_guard = self.documents.read().await;
         let parse_state = rw_guard.get(&params.text_document_position.text_document.uri);
+        debug!("{:#?}", params);
 
         match parse_state {
             Some(parse_state) => Ok(prov_goto::goto_references(
@@ -226,6 +229,19 @@ impl LanguageServer for Backend {
 
         match parse_state {
             Some(parse_state) => Ok(Some(prov_inlay_hint::get_inlay_hints(parse_state))),
+            None => Ok(None),
+        }
+    }
+
+    async fn code_lens(&self, params: CodeLensParams) -> Result<Option<Vec<CodeLens>>> {
+        let rw_guard = self.documents.read().await;
+        let parse_state = rw_guard.get(&params.text_document.uri);
+
+        match parse_state {
+            Some(parse_state) => Ok(Some(prov_code_lens::get_code_lenses(
+                parse_state,
+                params.text_document,
+            ))),
             None => Ok(None),
         }
     }
